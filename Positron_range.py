@@ -156,34 +156,33 @@ np.random.seed(int(seed))
 
 Tot_Npositr = 10
 for npart in range(Tot_Npositr):
+    first_iteration = True
     
+
+    
+    #Creo array dove tener conto della posizione della particella punto per punto
     X = []
     Y = []
-    
-    posiz = np.array([0, 0])
-    X.append(posiz[0])
-    Y.append(posiz[1])
-    
+    #E iniziallizzo l'energia CINETICA (E) della particella con E_0
     E = E_0
-    theta0 = np.random.uniform(0, 2*np.pi)
-
-    step = Step(Estep, E)
-    
-    x1, y1 = step*np.cos(theta0), step*np.sin(theta0)
-    posiz = np.array([x1, y1])
-    X.append(posiz[0])
-    Y.append(posiz[1])
-    
-    E -= Estep
     
     while(E > 0):
-        
-        theta_prim = np.random.normal(scale = 0.4)
+
+        if first_iteration:
+            posiz = np.array([0, 0])
+            X.append(posiz[0])
+            Y.append(posiz[1])
+            theta_prim = np.random.uniform(0, 2*np.pi)
+            theta0 = 0
+
+            first_iteration = False
+
+        else:
+            theta_prim = np.random.normal(scale = 0.4)
         
         step = Step(Estep, E)
-        x2_prim, y2_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
-        vett_prim = np.array([x2_prim, y2_prim])
-        
+        x1_prim, y1_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
+        vett_prim = np.array([x1_prim, y1_prim])
         vett = Rotation(theta0, vett_prim) + posiz
         E-=Estep
         theta0 += theta_prim
