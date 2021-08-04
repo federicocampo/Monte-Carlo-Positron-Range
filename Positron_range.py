@@ -125,7 +125,7 @@ def Sampling_Wdelta(W, E_kin):
     
     return p_w
     
- def Delta_position(vett_inizio, vett_fine):
+def Delta_position(vett_inizio, vett_fine):
      '''
      Estrae a caso un valore per stabilire il punto di creazione del raggio delta, 
      tra il punto di inizio e il punto di fine dello step fatto dal positrone, 
@@ -148,7 +148,7 @@ def Sampling_Wdelta(W, E_kin):
     
 #if __name__ == “main”: 
 
-# E = energia cinetica della particella (elettrone o positrone) primaria
+# Ekin = energia cinetica della particella (elettrone o positrone) primaria
 
 #seed = time.time()
 seed = 42
@@ -163,15 +163,18 @@ Tot_Npositr = 10
 for npart in range(Tot_Npositr):
     first_iteration = True
     
+    
 
     
     #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
     X = []
     Y = []
-    #E iniziallizzo l'energia CINETICA (E) della particella con E_0
-    E = E_0
+    #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
+    Ekin = E_0
     
-    while(E > 0):
+    while(Ekin > 0):
+
+        step = Step(Estep, Ekin)
 
         if first_iteration:
             posiz = np.array([0, 0])
@@ -181,59 +184,56 @@ for npart in range(Tot_Npositr):
             theta0 = 0
 
             first_iteration = False
-
+            delta = False
+        elif delta:
+            delta = False  
         else:
-            theta_prim = np.random.normal(scale = 0.4)
-        
-        step = Step(Estep, E)
+            theta_prim = np.random.normal(scale = 0.4)           
+
         x1_prim, y1_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
         vett_prim = np.array([x1_prim, y1_prim])
-
-        #Qui ci devo mettere la parte dove stabilisco in che punto si è creato il delta
-
-
-
         vett = Rotation(theta0, vett_prim) + posiz
-        E-=Estep
-        theta0 += theta_prim
-        posiz = vett 
-        
-        #Creazione di un raggio delta: viene creato in questo tratto di strada? y/n
+
+        #Viene creato in questo tratto di strada? y/n
         '''Calcolo quanti raggi delta vengono creati, tramite la funzione
         Ndelta. Dato che per ciascuno step, il numero di raggi delta creati, 
         ricavato con la formula, è < 1 (typ: 0.018), per stabilire st un delta 
         viene creato o no, estraggo un numero uniforme tra 0 e 1, e se il numero
         è minore del numero ricavato prima, vuol dire che il raggio delta è 
-        stato creato. Cioè uso Ndelta come una sorta di probabilità
+        stato creato. 
         '''
-        ndelta = Ndelta(E, step)
+        ndelta = Ndelta(Ekin, step)
         #mettere un controllo che ndelta sia < 1 ?
         yndelta = np.random.uniform(0, 1)
         
         if yndelta < ndelta: #se viene creato il delta..
             print('Delta!!')
-            #con che energia CINETICA viene creato il delta? con en_delta
-            tau = E/m_electrc2
+
+            # 1: In che punto viene creato il delta.
+            delta_position = Delta_position(posiz, vett)
+
+            # 2: Con che energia CINETICA (Ekin_delta) viene creato il delta.
+            #(Tutta questa parte la potrei mettere in una funzione)
+            tau = Ekin/m_electrc2
             W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
             
             flag = False
             while(flag is False):
                 '''
-                estraggo a caso una energia del delta en_delta, usando
+                estraggo a caso una energia del delta Ekin_delta, usando
                 rigetto elementare. uso una flag per stabilire quando
                 ho trovato un valore valido della distribuzione delle 
                 energie, cioè un valore valido dell'energia del delta
                 '''
-                en_delta = np.random.uniform(W_min, W_max)
-                p = Sampling_Wdelta(en_delta, E)
-                xi2 = np.random.uniform(0, Sampling_Wdelta(W_min, E))
+                Ekin_delta = np.random.uniform(W_min, W_max)
+                p = Sampling_Wdelta(Ekin_delta, Ekin)
+                xi2 = np.random.uniform(0, Sampling_Wdelta(W_min, Ekin))
                 if xi2 < p:
-                    print(en_delta)
+                    print(Ekin_delta)
                     flag = True
             
-            #Calcolo l'angolo di emissione del delta
-            phidelta = Phidelta(en_delta, E)
-            
+            # 3: Calcolo l'angolo di emissione del delta
+            phidelta = Phidelta(Ekin_delta, Ekin)
             '''
             dato che l'angolo del delta può essere sopra o sotto la direzione di incidenza, 
             estraggo un numero 0 o 1, per stabilire se il delta va a + 0 - phidelta
@@ -243,43 +243,32 @@ for npart in range(Tot_Npositr):
                 phidelta = -phidelta
             #print('Phi delta = ', phidelta*180/np.pi)
 
-            #Ora trovo il corrispondente angolo di emissione del positrone
-            phipositr = Phipositr(en_delta, E, phidelta)
+            # 4: Calcolo il corrispondente angolo di emissione del positrone
+            phipositr = Phipositr(Ekin_delta, Ekin, phidelta)
             #print('Phi positrone = ', phipositr*180/np.pi)
 
-
-        
-
-
+            # Inizia il pezzo in cui stabilisco la traiettoria del positrone dopo l'urto col delta
             
-            
-            
+            posiz = delta_position
+            X.append(posiz[0])
+            Y.append(posiz[1])
+            Ekin -= Ekin_delta
+            theta0 += theta_prim
+            theta_prim = phipositr
+            delta = True
 
+
+        else:
+            posiz = vett            
+            X.append(posiz[0])
+            Y.append(posiz[1])
+            Ekin -= Estep
+            theta0 += theta_prim
          
         
         
-        X.append(posiz[0])
-        Y.append(posiz[1])
     
     
     plt.plot(X, Y)
         
-    
-   
-   
-   
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
 plt.show()
