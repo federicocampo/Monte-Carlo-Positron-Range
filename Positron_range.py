@@ -39,11 +39,9 @@ def dedx_coll(E_kinetic): #E_kinetic in MeV
     return coll
 
 
-
 def Step(Estep, E_k):
     r = Estep/dedx_coll(E_k)
     return r
-
 
 
 def Ndelta(E_kin, step):
@@ -90,7 +88,6 @@ def Phipositr(w, e_kin, phidelta):
     positrone incidente, w = energia cinetica del delta, phidelta = angolo di emissione del 
     delta, rispetto alla direzione di incidenza del positrone
     '''
-
     phidelta = np.abs(phidelta)
     energy = e_kin + m_electrc2
     energy_prim = e_kin - w + m_electrc2
@@ -103,21 +100,6 @@ def Phipositr(w, e_kin, phidelta):
     #print('Cos(phi positrone) = ', cosphi1)
     phipositr = np.arccos(cosphi1)
     return phipositr
-    
-
-
-
-
-
-X = [] #X e Y array che terranno traccia delle posizioni del positr step per step
-Y = []
-    
-x = 0   #Posizione iniziale della particella creata
-y = 0
-    
-E_0 = 0.1 #Mev, energia iniziale positrone creato
-Estep = 3e-3 # MeV - Energia persa ad ogni step
-
 
 
 
@@ -143,7 +125,25 @@ def Sampling_Wdelta(W, E_kin):
     
     return p_w
     
- 
+ def Delta_position(vett_inizio, vett_fine):
+     '''
+     Estrae a caso un valore per stabilire il punto di creazione del raggio delta, 
+     tra il punto di inizio e il punto di fine dello step fatto dal positrone, 
+     scegliendo a caso un valore di x compreso tra i due valori di ascissa, 
+     e la corrispondente ordinata data dall'equazione della retta passante per quei
+     due punti (inizio e fine step)
+     '''
+     x_inizio = vett_inizio[0]
+     y_inizio = vett_inizio[1]
+     x_fine = vett_fine[0]
+     y_fine = vett_fine[1]
+
+     x_delta = np.random.uniform(x_inizio, x_fine)
+     y_delta = y_inizio + (y_fine - y_inizio)*(x_delta - x_inizio)/(x_fine - x_inizio)
+
+     vett_delta = np.array([x_delta, y_delta])
+     return vett_delta
+     
 
     
 #if __name__ == “main”: 
@@ -154,13 +154,18 @@ def Sampling_Wdelta(W, E_kin):
 seed = 42
 np.random.seed(int(seed))
 
+    
+E_0 = 0.1 #Mev, energia iniziale positrone creato
+Estep = 3e-3 # MeV - Energia persa ad ogni step
+
+
 Tot_Npositr = 10
 for npart in range(Tot_Npositr):
     first_iteration = True
     
 
     
-    #Creo array dove tener conto della posizione della particella punto per punto
+    #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
     X = []
     Y = []
     #E iniziallizzo l'energia CINETICA (E) della particella con E_0
@@ -183,6 +188,11 @@ for npart in range(Tot_Npositr):
         step = Step(Estep, E)
         x1_prim, y1_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
         vett_prim = np.array([x1_prim, y1_prim])
+
+        #Qui ci devo mettere la parte dove stabilisco in che punto si è creato il delta
+
+
+
         vett = Rotation(theta0, vett_prim) + posiz
         E-=Estep
         theta0 += theta_prim
