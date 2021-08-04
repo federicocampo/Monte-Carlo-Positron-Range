@@ -159,13 +159,13 @@ E_0 = 0.1 #Mev, energia iniziale positrone creato
 Estep = 3e-3 # MeV - Energia persa ad ogni step
 
 
-Tot_Npositr = 10
+Tot_Npositr = 50
 for npart in range(Tot_Npositr):
-    first_iteration = True
-    
-    
 
-    
+    delta_parameters = np.zeros((10, 5))
+    i_delta = 0
+
+    first_iteration = True
     #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
     X = []
     Y = []
@@ -211,12 +211,9 @@ for npart in range(Tot_Npositr):
 
             # 1: In che punto viene creato il delta.
             delta_position = Delta_position(posiz, vett)
-
             # 2: Con che energia CINETICA (Ekin_delta) viene creato il delta.
-            #(Tutta questa parte la potrei mettere in una funzione)
             tau = Ekin/m_electrc2
             W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
-            
             flag = False
             while(flag is False):
                 '''
@@ -229,7 +226,6 @@ for npart in range(Tot_Npositr):
                 p = Sampling_Wdelta(Ekin_delta, Ekin)
                 xi2 = np.random.uniform(0, Sampling_Wdelta(W_min, Ekin))
                 if xi2 < p:
-                    print(Ekin_delta)
                     flag = True
             
             # 3: Calcolo l'angolo di emissione del delta
@@ -241,14 +237,10 @@ for npart in range(Tot_Npositr):
             temp = np.random.randint(2)
             if temp == 0:
                 phidelta = -phidelta
-            #print('Phi delta = ', phidelta*180/np.pi)
-
             # 4: Calcolo il corrispondente angolo di emissione del positrone
             phipositr = Phipositr(Ekin_delta, Ekin, phidelta)
-            #print('Phi positrone = ', phipositr*180/np.pi)
 
             # Inizia il pezzo in cui stabilisco la traiettoria del positrone dopo l'urto col delta
-            
             posiz = delta_position
             X.append(posiz[0])
             Y.append(posiz[1])
@@ -256,6 +248,16 @@ for npart in range(Tot_Npositr):
             theta0 += theta_prim
             theta_prim = phipositr
             delta = True
+            # E ora salvo i parametri del delta per utilizzarli dopo
+            delta_parameters[i_delta][0] = Ekin_delta
+            delta_parameters[i_delta][1] = delta_position[0]
+            delta_parameters[i_delta][2] = delta_position[1]
+            delta_parameters[i_delta][3] = theta0
+            delta_parameters[i_delta][4] = phidelta
+            print('Sto salvando i parametri e vengono:')
+            print(delta_parameters[i_delta][:])
+            i_delta += 1
+            
 
 
         else:
@@ -265,10 +267,46 @@ for npart in range(Tot_Npositr):
             Ekin -= Estep
             theta0 += theta_prim
          
-        
-        
+
+    plt.plot(X, Y, color = 'tab:blue')
+    if delta_parameters.any() == 0:
+    else:
+        Tot_delta = i_delta
+        for ndelta in range(Tot_delta):
+            first_iteration = True
+            #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
+            X = []
+            Y = []
+            #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
+            Ekin = delta_parameters[ndelta][0]
+            while(Ekin > 0):
+
+                step = Step(Estep, Ekin)
+
+                if first_iteration:
+
+                    posiz = np.array([delta_parameters[ndelta][1], delta_parameters[ndelta][2]])
+                    X.append(posiz[0])
+                    Y.append(posiz[1])
+                    theta_prim = delta_parameters[ndelta][4]
+                    theta0 = delta_parameters[ndelta][3]
+
+                    first_iteration = False 
+                else:
+                    theta_prim = np.random.normal(scale = 0.4)           
+
+                x1_prim, y1_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
+                vett_prim = np.array([x1_prim, y1_prim])
+                vett = Rotation(theta0, vett_prim) + posiz
+
+                posiz = vett            
+                X.append(posiz[0])
+                Y.append(posiz[1])
+                Ekin -= Estep
+                theta0 += theta_prim
+        plt.plot(X, Y, color = 'tab:red')
+
     
     
-    plt.plot(X, Y)
         
 plt.show()
