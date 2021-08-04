@@ -71,7 +71,8 @@ def Ndelta(E_kin, step):
 
 
 def Phidelta(w, E_kin):
-    '''Data l'energia w del delta creato e l'energia E_kin, da cui ricavo beta della
+    '''
+    Data l'energia w del delta creato e l'energia E_kin, da cui ricavo beta della
     particella incidente, ricavo l'angolo di emissione del delta: phi
     '''
     Energy = E_kin + m_electrc2
@@ -82,6 +83,27 @@ def Phidelta(w, E_kin):
     return phi
 
 
+def Phipositr(w, e_kin, phidelta):
+    '''
+    Calcola l'angolo di emissione del positrone dopo l'urto che ha creato un raggio
+    delta, imponendo la conservazione dell'impulso,  dato e_kin = energia cinetica
+    positrone incidente, w = energia cinetica del delta, phidelta = angolo di emissione del 
+    delta, rispetto alla direzione di incidenza del positrone
+    '''
+
+    phidelta = np.abs(phidelta)
+    energy = e_kin + m_electrc2
+    energy_prim = e_kin - w + m_electrc2
+    energy2 = w + m_electrc2
+    p1 = np.sqrt(energy**2 - m_electrc2**2)
+    p1_prim = np.sqrt(energy_prim**2 - m_electrc2**2)
+    p2_prim = np.sqrt(energy2**2 - m_electrc2**2)
+
+    cosphi1 = -p2_prim*np.cos(phidelta)/p1_prim
+    #print('Cos(phi positrone) = ', cosphi1)
+    phipositr = np.arccos(cosphi1)
+    return phipositr
+    
 
 
 
@@ -127,7 +149,9 @@ def Sampling_Wdelta(W, E_kin):
 #if __name__ == “main”: 
 
 # E = energia cinetica della particella (elettrone o positrone) primaria
-seed = time.time()
+
+#seed = time.time()
+seed = 42
 np.random.seed(int(seed))
 
 Tot_Npositr = 10
@@ -173,14 +197,13 @@ for npart in range(Tot_Npositr):
         è minore del numero ricavato prima, vuol dire che il raggio delta è 
         stato creato. Cioè uso Ndelta come una sorta di probabilità
         '''
-         
         ndelta = Ndelta(E, step)
         #mettere un controllo che ndelta sia < 1 ?
         yndelta = np.random.uniform(0, 1)
         
         if yndelta < ndelta: #se viene creato il delta..
             print('Delta!!')
-            #con che energia viene creato il delta?
+            #con che energia CINETICA viene creato il delta? con en_delta
             tau = E/m_electrc2
             W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
             
@@ -209,7 +232,14 @@ for npart in range(Tot_Npositr):
             temp = np.random.randint(2)
             if temp == 0:
                 phidelta = -phidelta
-            print('Phi delta = ', phidelta*180/np.pi)
+            #print('Phi delta = ', phidelta*180/np.pi)
+
+            #Ora trovo il corrispondente angolo di emissione del positrone
+            phipositr = Phipositr(en_delta, E, phidelta)
+            #print('Phi positrone = ', phipositr*180/np.pi)
+
+
+        
 
 
             
