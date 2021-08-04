@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
-
-## Energy in MeV, dx in cm
+import time
+# Energy in MeV, dx in cm
 
 m_positrc2 = 0.511  #MeV
 m_electrc2 = m_positrc2
@@ -23,7 +23,7 @@ I = (12*Z + 7)*1e-6 #MeV
 
 # E_kinetic typ da poter usare nelle prove: 0.8 MeV = 800 keV
 
-##Robe utili per il calcolo dei raggi delta:
+#Robe utili per il calcolo dei raggi delta:
 W_min = 0.01 #[MeV] = 10 keV energia minima del delta, affinchè venga prodotto
 
 
@@ -52,7 +52,6 @@ def Ndelta(E_kin, step):
     e la lunghezza dello step, spazio percorso, e restituisce il numero di 
     elettroni delta prodotti in quel tragitto "step"
     '''
-    
     W_min = 0.01 #[MeV] : 10keV come energia minima di produzione
 
     if E_kin > W_min:
@@ -60,23 +59,51 @@ def Ndelta(E_kin, step):
         beta = np.sqrt(Energy**2 - m_positrc2**2)/Energy
         
         A = N_e * 2*np.pi* r_e**2 * m_electrc2 #primo pezzo, senza il beta al denom
-        
         tau = E_kin/m_electrc2
-        
         W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
-        
         G = (W_max-W_min)/(Energy)**2
-        
         B = (1/W_min - 1/W_max) - beta**2 *np.log(W_max/W_min)/W_max + G
-        
         dndx = A/beta**2 * B
-        
         N_delta = dndx * step
-        
     else: N_delta = 0
     
     return N_delta
 
+
+def Phidelta(w, E_kin):
+    '''
+    Data l'energia w del delta creato e l'energia E_kin, da cui ricavo beta della
+    particella incidente, ricavo l'angolo di emissione del delta: phi
+    '''
+    Energy = E_kin + m_electrc2
+    beta = np.sqrt(Energy**2 - m_positrc2**2)/Energy
+
+    phi = np.arccos(np.sqrt(w/(2*m_electrc2*beta**2)))
+
+    return phi
+
+
+def Phipositr(w, e_kin, phidelta):
+    '''
+    Calcola l'angolo di emissione del positrone dopo l'urto che ha creato un raggio
+    delta, imponendo la conservazione dell'impulso,  dato e_kin = energia cinetica
+    positrone incidente, w = energia cinetica del delta, phidelta = angolo di emissione del 
+    delta, rispetto alla direzione di incidenza del positrone
+    '''
+
+    phidelta = np.abs(phidelta)
+    energy = e_kin + m_electrc2
+    energy_prim = e_kin - w + m_electrc2
+    energy2 = w + m_electrc2
+    p1 = np.sqrt(energy**2 - m_electrc2**2)
+    p1_prim = np.sqrt(energy_prim**2 - m_electrc2**2)
+    p2_prim = np.sqrt(energy2**2 - m_electrc2**2)
+
+    cosphi1 = -p2_prim*np.cos(phidelta)/p1_prim
+    #print('Cos(phi positrone) = ', cosphi1)
+    phipositr = np.arccos(cosphi1)
+    return phipositr
+    
 
 
 
@@ -122,9 +149,13 @@ def Sampling_Wdelta(W, E_kin):
 #if __name__ == “main”: 
 
 # E = energia cinetica della particella (elettrone o positrone) primaria
-np.random.seed(42)
 
-for npart in range(10):
+#seed = time.time()
+seed = 42
+np.random.seed(int(seed))
+
+Tot_Npositr = 10
+for npart in range(Tot_Npositr):
     
     X = []
     Y = []
@@ -166,27 +197,52 @@ for npart in range(10):
         è minore del numero ricavato prima, vuol dire che il raggio delta è 
         stato creato. Cioè uso Ndelta come una sorta di probabilità
         '''
-         
         ndelta = Ndelta(E, step)
         #mettere un controllo che ndelta sia < 1 ?
         yndelta = np.random.uniform(0, 1)
         
         if yndelta < ndelta: #se viene creato il delta..
             print('Delta!!')
-            #con che energia viene creato il delta?
+            #con che energia CINETICA viene creato il delta? con en_delta
             tau = E/m_electrc2
             W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
             
             flag = False
             while(flag is False):
-                #estraggo a caso una energia del delta en_delta, usando
-                #rigetto elementare
+                '''
+                estraggo a caso una energia del delta en_delta, usando
+                rigetto elementare. uso una flag per stabilire quando
+                ho trovato un valore valido della distribuzione delle 
+                energie, cioè un valore valido dell'energia del delta
+                '''
                 en_delta = np.random.uniform(W_min, W_max)
                 p = Sampling_Wdelta(en_delta, E)
                 xi2 = np.random.uniform(0, Sampling_Wdelta(W_min, E))
                 if xi2 < p:
                     print(en_delta)
                     flag = True
+            
+            #Calcolo l'angolo di emissione del delta
+            phidelta = Phidelta(en_delta, E)
+            
+            '''
+            dato che l'angolo del delta può essere sopra o sotto la direzione di incidenza, 
+            estraggo un numero 0 o 1, per stabilire se il delta va a + 0 - phidelta
+            '''
+            temp = np.random.randint(2)
+            if temp == 0:
+                phidelta = -phidelta
+            #print('Phi delta = ', phidelta*180/np.pi)
+
+            #Ora trovo il corrispondente angolo di emissione del positrone
+            phipositr = Phipositr(en_delta, E, phidelta)
+            #print('Phi positrone = ', phipositr*180/np.pi)
+
+
+        
+
+
+            
             
             
 
