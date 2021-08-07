@@ -21,6 +21,42 @@ I = (12*Z + 7)*1e-6 #MeV
 W_min = 0.01 #[MeV] = 10 keV energia minima del delta, affinchè venga prodotto
 
 
+
+def SamplingE0(isotope):
+
+    def Distr_energie(E, z, emax):
+        Energy = E + m_electrc2
+        pc = np.sqrt(Energy**2 - m_positrc2**2)
+        eta = -z*E/(137*pc)
+        F_ze = 2*np.pi*eta/(1-np.exp(-2*np.pi*eta))
+        n_e = F_ze * pc * E * (emax-E)**2
+        return n_e
+    
+    if isotope == 'F18':
+        z = 10
+        E_endpoint = 0.635
+        h = 0.250
+    elif isotope == 'C11':
+        z = 7
+        E_endpoint = 0.970
+        h = 0.39
+    elif isotope == 'N13':
+        z = 8
+        E_endpoint = 1.190
+        h = 0.49
+    elif isotope == 'O15':
+        z = 9
+        E_endpoint = 1.72
+        h = 0.74
+    
+    found = False
+    while found is False:
+        E_k = np.random.uniform(0, E_endpoint)
+        y = np.random.uniform(0, h+0.1)
+        if y < Distr_energie(E_k, z, E_endpoint):
+            found = True
+    return E_k
+
 def dedx_coll(E_kin): #E_kin in MeV
 
     Energy = E_kin + m_positrc2
@@ -36,11 +72,9 @@ def dedx_coll(E_kin): #E_kin in MeV
     coll = coll1 * coll2
     return coll
 
-
 def Step(Estep, E_kin):
     r = Estep/dedx_coll(E_kin)
     return r
-
 
 def Ndelta(E_kin, step):
     '''
@@ -65,7 +99,6 @@ def Ndelta(E_kin, step):
     
     return N_delta
 
-
 def Phidelta(w, E_kin):
     '''
     Data l'energia w del delta creato e l'energia E_kin, da cui ricavo beta della
@@ -83,7 +116,6 @@ def Phidelta(w, E_kin):
     if temp == 0:
         phi = -phi
     return phi
-
 
 def Phipositr(w, e_kin, phidelta):
     '''
@@ -108,7 +140,6 @@ def Phipositr(w, e_kin, phidelta):
     phipositr = np.arcsin(sinphi1)
     return phipositr
 
-
 def Rotation(theta, vect_prim):
     rot_mat = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
     #vect_prim = np.array([[x_prim], [y_prim]])
@@ -120,30 +151,31 @@ def Traslation(vect_prim, vect_o_prim):
     vect_trasled = vect_prim + vect_o_prim
     return vect_trasled 
     
-
 def SamplingEkinDelta(E_kin):
     W_min = 0.01 #[MeV] energia necessaria per creare un delta, limite inferiore dell'intervallo
+    Energy = E_kin + m_electrc2
+    beta = np.sqrt(Energy**2 - m_positrc2**2)/Energy
     tau = E_kin/m_electrc2
     W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
 
     flag = False
-    while(flag is False):
-         '''
-         estraggo a caso una energia del delta Ekin_delta, usando
-         rigetto elementare. uso una flag per stabilire quando
-         ho trovato un valore valido della distribuzione delle 
-         energie, cioè un valore valido dell'energia del delta
-         '''
-         E_kin_delta = np.random.uniform(W_min, W_max)
-         p_w = 1/E_kin_delta**2 - 1/(E_kin_delta*W_max)
-         h = 1/W_min**2 - 1/(W_min*W_max)
-         y = np.random.uniform(0, h)
-         if y < p_w:
-             flag = True
-    return E_kin_delta
 
-
-
+    if E_kin > W_min:
+        while(flag is False):
+            '''
+            estraggo a caso una energia del delta W, usando
+            rigetto elementare. uso una flag per stabilire quando
+            ho trovato un valore valido della distribuzione delle 
+            energie, cioè un valore valido dell'energia del delta
+            '''
+            W = np.random.uniform(W_min, W_max)
+            p_w = 1/(beta**2 * W**2) - 1/(W*W_max)
+            h = 1/W_min**2 - 1/(W_min*W_max)
+            y = np.random.uniform(0, h)
+            if y < p_w:
+                flag = True
+    else: W = 0
+    return W
 
 def DeltaPosition(vett_inizio, vett_fine):
      '''
@@ -168,7 +200,6 @@ def DeltaPosition(vett_inizio, vett_fine):
      vett_delta = np.array([x_delta, y_delta])
      return vett_delta
      
-
 def SamplingMultipleScattering(dx, E_kin):
     '''
     dx = step [cm]
@@ -231,7 +262,6 @@ def SamplingGauss(dx, E_kin):
         y = np.random.uniform(0, h)
         if y < p:
             found = True
-            print('Theta scattering = deg ', theta_rand*180/np.pi)
     return theta_rand
  
 #if __name__ == “main”: 
@@ -243,12 +273,20 @@ seed = 42
 np.random.seed(int(seed))
 
     
-E_0 = 0.7 #Mev, energia iniziale positrone creato
-Estep = 3e-3 # MeV - Energia persa ad ogni step
+Estep = 1e-3 # MeV - Energia persa ad ogni step
 
-Tot_Npositr = 5
+#Creo array per tener conto della fine del percorso del positrone
+X_end = []
+Y_end = []
+
+
+Tot_Npositr = 10000
+
+text_file = open("endpoints.txt", "w")
+text_file.write('#x_endpoint   y_endpoint \n')
 for npart in range(Tot_Npositr):
-
+    if npart%10==0:
+        print(npart)
     delta_parameters = np.zeros((10, 5))
     i_delta = 0
 
@@ -256,11 +294,14 @@ for npart in range(Tot_Npositr):
     #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
     X = []
     Y = []
+
+
+
     #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
+    E_0 = SamplingE0('F18') #Mev, energia iniziale positrone creato. Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
     Ekin = E_0
     
-    while(Ekin > 0):
-
+    while(Ekin > Estep):
         step = Step(Estep, Ekin)
         if step < 0:
             #DEBUGGARE QUESTA PARTE
@@ -331,15 +372,19 @@ for npart in range(Tot_Npositr):
             Ekin -= Estep
             theta0 += theta_prim
          
+    X_end.append(X[-1])
+    Y_end.append(Y[-1])
+    text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
 
     plt.plot(X, Y, color = 'tab:blue')
+    plt.xlabel('x [cm]')
+    plt.ylabel('y [cm]')
+
     if delta_parameters.any() == 0:
         pass
     else:
-
         Tot_delta = i_delta
         for ndelta in range(Tot_delta):
-
 
             first_iteration = True
             #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
@@ -347,7 +392,7 @@ for npart in range(Tot_Npositr):
             Y = []
             #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
             Ekin = delta_parameters[ndelta][0]
-            while(Ekin > 0):
+            while(Ekin > Estep):
 
                 step = Step(Estep, Ekin)
 
@@ -361,9 +406,8 @@ for npart in range(Tot_Npositr):
 
                     first_iteration = False 
                 else:
+                    theta_prim = SamplingGauss(step,Ekin) 
 
-                    #theta_prim = np.random.normal(scale = 0.4)           
-                    theta_prim = 0
                 x1_prim, y1_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
                 vett_prim = np.array([x1_prim, y1_prim])
                 vett = Rotation(theta0, vett_prim) + posiz
@@ -374,8 +418,10 @@ for npart in range(Tot_Npositr):
                 Ekin -= Estep
                 theta0 += theta_prim
             plt.plot(X, Y, color = 'tab:red')
+            plt.xlabel('x [cm]')
+            plt.ylabel('y [cm]')
 
-    
-    
+text_file.close()  
+
         
 plt.show()
