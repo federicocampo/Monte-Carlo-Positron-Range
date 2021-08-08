@@ -72,15 +72,25 @@ def dedx_coll(E_kin): #E_kin in MeV
     coll = coll1 * coll2
     return coll
 
+def dedx_rad(E_kin):
+    Energy = E_kin + m_positrc2
+    rad1 = density*N_av/A * Energy * 4*Z**2 * r_e**2 *1/137 
+    a = Z/137
+    f_z = a**2 * ((1+a**2)**-1 + 0.20206 - 0.0369*a**2 + 0.0083*a**4 - 0.002*a**6)
+    rad2 = np.log(2*Energy /m_electrc2) - 1/3 - f_z
+
+    rad = rad1 * rad2
+    return rad
+
 def Step(Estep, E_kin):
-    r = Estep/dedx_coll(E_kin)
+    r = Estep/(dedx_coll(E_kin)+dedx_rad(E_kin))
     return r
 
 def Ndelta(E_kin, step):
     '''
     Prende in input l'energia cinetica della particella incidente (E_kin), 
     e la lunghezza dello step, spazio percorso, e restituisce il numero di 
-    elettroni delta prodotti in quel tragitto "step"
+    elettroni delta prodotti durante quello "step"
     '''
     W_min = 10e-3 #[MeV] : 10keV come energia minima di produzione
 
@@ -88,12 +98,12 @@ def Ndelta(E_kin, step):
         Energy = E_kin + m_electrc2
         beta = np.sqrt(Energy**2 - m_positrc2**2)/Energy
         
-        AA = N_e * 2*np.pi* r_e**2 * m_electrc2 #primo pezzo, senza il beta al denom
+        A1 = N_e * 2*np.pi* r_e**2 * m_electrc2 /beta**2 
         tau = E_kin/m_electrc2
         W_max = 2*tau*(tau +2)*m_electrc2/(2+ 2*(tau+1))
         G = (W_max-W_min)/(Energy)**2
-        B = (1/W_min - 1/W_max) - beta**2 *np.log(W_max/W_min)/W_max + G
-        dndx = AA/beta**2 * B
+        A2 = (1/W_min - 1/W_max) - beta**2 *np.log(W_max/W_min)/W_max + G
+        dndx = A1 * A2
         N_delta = dndx * step
     else: N_delta = 0
     
@@ -281,9 +291,11 @@ Y_end = []
 
 
 Tot_Npositr = 10000
+WRITE = True
+if WRITE:
+    text_file = open("endpointsC11.txt", "w")
+    text_file.write('#x_endpoint   y_endpoint \n')
 
-text_file = open("endpoints.txt", "w")
-text_file.write('#x_endpoint   y_endpoint \n')
 for npart in range(Tot_Npositr):
     if npart%10==0:
         print(npart)
@@ -298,16 +310,13 @@ for npart in range(Tot_Npositr):
 
 
     #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
-    E_0 = SamplingE0('F18') #Mev, energia iniziale positrone creato. Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
+    E_0 = SamplingE0('C11') #Mev, energia iniziale positrone creato. Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
     Ekin = E_0
     
     while(Ekin > Estep):
+
         step = Step(Estep, Ekin)
-        if step < 0:
-            #DEBUGGARE QUESTA PARTE
-            print('Step = cm', step)
-
-
+   
         if first_iteration:
             posiz = np.array([0, 0])
             X.append(posiz[0])
@@ -318,6 +327,7 @@ for npart in range(Tot_Npositr):
             first_iteration = False
             delta = False
         elif delta:
+            '''Se si è creato un delta, l'angolo è già stato determinato dalle funzioni apposite.'''
             delta = False  
         else:
             theta_prim = SamplingGauss(step, Ekin)
@@ -374,7 +384,9 @@ for npart in range(Tot_Npositr):
          
     X_end.append(X[-1])
     Y_end.append(Y[-1])
-    text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
+
+    if WRITE:
+        text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
 
     plt.plot(X, Y, color = 'tab:blue')
     plt.xlabel('x [cm]')
@@ -421,7 +433,8 @@ for npart in range(Tot_Npositr):
             plt.xlabel('x [cm]')
             plt.ylabel('y [cm]')
 
-text_file.close()  
+if WRITE:
+    text_file.close()  
 
         
 plt.show()
