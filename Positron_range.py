@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import time
-# Energy in MeV, dx in cm
 
 m_positrc2 = 0.511  #MeV
 m_electrc2 = m_positrc2
@@ -18,13 +17,13 @@ N_e = density * N_av *Z/A
 I = (12*Z + 7)*1e-6 #MeV
 
 #Quantità per il calcolo dei raggi delta:
-W_min = 0.01 #[MeV] = 10 keV energia minima del delta, affinchè venga prodotto
+W_min = 0.01 #[MeV] = 10 keV energia cinetica minima del delta, affinchè abbia range significativo
 
 
 
 def SamplingE0(isotope):
     '''
-    Per ciascun isotopo scelto tra 'F18', restituisce, campionando la distribuzione, 
+    Per ciascun isotopo scelto tra F18, C11, N13, O15, restituisce, campionando la distribuzione, 
     l'energia cinetica della particella creata.
     '''
     def Distr_energie(E, z, emax):
@@ -61,7 +60,9 @@ def SamplingE0(isotope):
     return E_k
 
 def dedx_coll(E_kin, particle = 'pos'): #E_kin in MeV
-
+    '''Prende in input l'energia cinetica della particella, e il tipo di particella 
+    positrone (di default), o elettrone, e restituisce l'energia persa per collisioni, 
+    per unità di percorso'''
     Energy = E_kin + m_positrc2
     beta = np.sqrt(Energy**2 - m_positrc2**2)/Energy
     
@@ -78,6 +79,9 @@ def dedx_coll(E_kin, particle = 'pos'): #E_kin in MeV
     return coll
 
 def dedx_rad(E_kin):
+    '''Prende in input l'energia cinetica della particella, 
+    e restituisce l'energia persa per Bremsstralungh, 
+    per unità di percorso'''
     Energy = E_kin + m_positrc2
     rad1 = density*N_av/A * Energy * 4*Z**2 * r_e**2 *1/137 
     a = Z/137
@@ -88,6 +92,10 @@ def dedx_rad(E_kin):
     return rad
 
 def Step(Estep, E_kin, particle = 'pos'):
+    '''Prende in input l'energia cinetica della particella,         
+    e l'energia da perdere lungo uno step, e restituisce la lunghezza
+    del percorso necessaria a perdere quell'energia
+    '''
     if particle == 'pos':
         r = Estep/(dedx_coll(E_kin)+dedx_rad(E_kin))
     elif particle == 'el':
@@ -98,7 +106,7 @@ def Ndelta(E_kin, step):
     '''
     Prende in input l'energia cinetica della particella incidente (E_kin), 
     e la lunghezza dello step, spazio percorso, e restituisce il numero di 
-    elettroni delta prodotti durante quello "step"
+    elettroni delta prodotti durante quello step
     '''
     W_min = 10e-3 #[MeV] : 10keV come energia minima di produzione
 
@@ -159,6 +167,8 @@ def Phipositr(w, e_kin, phidelta):
     return phipositr
 
 def Rotation(theta, vect_prim):
+    '''Ruota il vettore vect_prim di un angolo theta e restituisce il vettore ruotato
+    '''
     rot_mat = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
     #vect_prim = np.array([[x_prim], [y_prim]])
     vect = np.dot(rot_mat, vect_prim)
@@ -252,8 +262,8 @@ def SamplingGauss(dx, E_kin):
 if __name__ == '__main__': 
     # Ekin = energia cinetica della particella (elettrone o positrone) primaria
 
-    #seed = time.time()
-    seed = 42
+    seed = time.time()
+    #seed = 42
     np.random.seed(int(seed))
 
         
@@ -264,15 +274,16 @@ if __name__ == '__main__':
     Y_end = []
 
 
-    Tot_Npositr = 2000
+    Tot_Npositr = 100
     Isotope = 'F18'
-    WRITE = True
+    WRITE = False
     if WRITE:
-        text_file = open("endpointsF18.txt", "w")
+        text_file = open("endpointsC11.txt", "w")
         text_file.write('#x_endpoint   y_endpoint \n')
 
     for npart in range(Tot_Npositr):
         if npart%10==0:
+            #Print per vedere l'andamento della simulazione
             print(npart)
         delta_parameters = np.zeros((20, 5))
         i_delta = 0
@@ -364,8 +375,6 @@ if __name__ == '__main__':
             text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
 
         plt.plot(X, Y, color = 'tab:blue')
-        plt.xlabel('x [cm]')
-        plt.ylabel('y [cm]')
 
         if delta_parameters.any() == 0:
             pass
@@ -405,9 +414,11 @@ if __name__ == '__main__':
                     Ekin -= Estep
                     theta0 += theta_prim
                 plt.plot(X, Y, color = 'tab:red')
-                plt.xlabel('x [cm]')
-                plt.ylabel('y [cm]')
-
+                
+    plt.xlabel('x [cm]')
+    plt.ylabel('y [cm]') 
+    plt.grid()
+    #plt.savefig('../Figure/O15.png')
     if WRITE:
         text_file.close()  
 
