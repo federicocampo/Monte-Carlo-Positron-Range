@@ -259,11 +259,21 @@ def SamplingGauss(dx, E_kin):
             found = True
     return theta_rand
  
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__': 
     # Ekin = energia cinetica della particella (elettrone o positrone) primaria
 
-    seed = time.time()
-    #seed = 42
+    #seed = time.time()
+    seed = 42
     np.random.seed(int(seed))
 
         
@@ -272,13 +282,22 @@ if __name__ == '__main__':
     #Creo array per tener conto della fine del percorso del positrone
     X_end = []
     Y_end = []
-
-
-    Tot_Npositr = 100
+    
+    #Numero di positroni da generare
+    Tot_Npositr = 1000
+    # Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
     Isotope = 'F18'
+
+    #Stabilisco se mettere on (True) o off (False) la produzione di delta
+    DELTAPROD = False
+    #Stabilisco se scrivere e salvare su file txt le coordinate di arresto
     WRITE = False
+    #Stabilisco se creare il grafico dei vari percorsi
+    PLOT = False
+
+
     if WRITE:
-        text_file = open("endpointsC11.txt", "w")
+        text_file = open("endpointsO15.txt", "w")
         text_file.write('#x_endpoint   y_endpoint \n')
 
     for npart in range(Tot_Npositr):
@@ -292,7 +311,6 @@ if __name__ == '__main__':
         #Creo array dove tener conto della posizione della particella punto per punto, per ciascuna particella
         X = []
         Y = []
-
 
 
         #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
@@ -317,23 +335,25 @@ if __name__ == '__main__':
                 delta = False  
             else:
                 theta_prim = SamplingGauss(step, Ekin)
-
             x1_prim, y1_prim = step*np.cos(theta_prim), step*np.sin(theta_prim)
             vett_prim = np.array([x1_prim, y1_prim])
             vett = Rotation(theta0, vett_prim) + posiz
             
             #Viene creato in questo tratto di strada? y/n
-            '''Calcolo quanti raggi delta vengono creati, tramite la funzione
+            '''Calcolo ndelta: numero di raggi delta che vengono creati, tramite la funzione
             Ndelta. Dato che per ciascuno step, il numero di raggi delta creati, 
             ricavato con la formula, è < 1 (typ: 0.018), per stabilire st un delta 
-            viene creato o no, estraggo un numero uniforme tra 0 e 1, e se il numero
+            viene creato o no, estraggo yndelta (yes or no delta): un numero uniforme tra 0 e 1, e se il numero
             è minore del numero ricavato prima, vuol dire che il raggio delta è 
             stato creato. 
             '''
-            ndelta = Ndelta(Ekin, step)
-            #mettere un controllo che ndelta sia < 1 ?
+            ndelta = Ndelta(Ekin, step)            
             yndelta = np.random.uniform(0, 1)
-            #yndelta = ndelta + 1 #Elimino la creazione di delta
+
+            #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA NON FACCIO PRODURRE RAGGI DELTA
+            if not DELTAPROD:
+                yndelta = ndelta +1
+
             if yndelta < ndelta: #SE VIENE CREATO IL DELTA
                 # 1: In che punto viene creato il delta.
                 delta_position = DeltaPosition(posiz, vett)
@@ -368,13 +388,29 @@ if __name__ == '__main__':
                 Ekin -= Estep
                 theta0 += theta_prim
             
-        X_end.append(X[-1])
-        Y_end.append(Y[-1])
+        #Salvo nei rispettivi array, le coordinate di fine percorso del positrone 
+        #Uso try/except perchè può capitare che venga creato un positrone che ha energia iniziale minore di estep, e X, Y non hanno elementi 
+        try:
+            X_end.append(X[-1])
+            Y_end.append(Y[-1])
+            #Scrivo su file le coordinate di fine percorso positrone
+            if WRITE:
+                text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
+
+        except IndexError:
+            X_end.append(0)
+            Y_end.append(0)
+            if WRITE:
+                text_file.write('0  0\n')
+
 
         if WRITE:
             text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
+        if PLOT:
+            plt.plot(X, Y, color = 'tab:blue')
 
-        plt.plot(X, Y, color = 'tab:blue')
+        
+        
 
         if delta_parameters.any() == 0:
             pass
@@ -413,8 +449,11 @@ if __name__ == '__main__':
                     Y.append(posiz[1])
                     Ekin -= Estep
                     theta0 += theta_prim
-                plt.plot(X, Y, color = 'tab:red')
-                
+
+                if PLOT:
+                    plt.plot(X, Y, color = 'tab:red')
+
+
     plt.xlabel('x [cm]')
     plt.ylabel('y [cm]') 
     plt.grid()
@@ -422,5 +461,17 @@ if __name__ == '__main__':
     if WRITE:
         text_file.close()  
 
-            
+    #Calcolo del range medio
+    X_end = np.array(X_end)
+    Y_end = np.array(Y_end)
+
+    Range = np.sqrt(X_end**2 + Y_end**2) 
+
+    mean_range = np.mean(Range)
+    devstd_range = np.std(Range)
+    print(f'Range medio = {mean_range} +/- {devstd_range}')      
+
+
+
+
     plt.show()
