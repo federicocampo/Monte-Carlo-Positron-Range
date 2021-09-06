@@ -10,11 +10,12 @@ N_av = 6.022e23 #mol^-1 - Numero di avogadro
 density = 1  #g/cm3 - densità acqua
 
 Z = 7.42 # Z efficace H2O
-A = 18
+A = 13.36 # A efficace H20
 
 N_e = density * N_av *Z/A
 
-I = (12*Z + 7)*1e-6 #MeV
+#I = (12*Z + 7)*1e-6 #Mev
+I = 75*1e-6 #[MeV]
 
 #Quantità per il calcolo dei raggi delta:
 W_min = 0.01 #[MeV] = 10 keV energia cinetica minima del delta, affinchè abbia range significativo
@@ -284,12 +285,12 @@ if __name__ == '__main__':
     Y_end = []
     
     #Numero di positroni da generare
-    Tot_Npositr = 1000
+    Tot_Npositr = 2000
     # Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
     Isotope = 'F18'
 
     #Stabilisco se mettere on (True) o off (False) la produzione di delta
-    DELTAPROD = False
+    DELTAPROD = True
     #Stabilisco se scrivere e salvare su file txt le coordinate di arresto
     WRITE = False
     #Stabilisco se creare il grafico dei vari percorsi
@@ -297,11 +298,14 @@ if __name__ == '__main__':
 
 
     if WRITE:
-        text_file = open("endpointsO15.txt", "w")
+        filename = 'endpoints' + Isotope + '.txt'
+        if not DELTAPROD:
+            filename = 'endpoints' + Isotope + 'NODELTA.txt'
+        text_file = open(filename, "w")
         text_file.write('#x_endpoint   y_endpoint \n')
-
+    print(filename)
     for npart in range(Tot_Npositr):
-        if npart%10==0:
+        if npart%100==0:
             #Print per vedere l'andamento della simulazione
             print(npart)
         delta_parameters = np.zeros((20, 5))
@@ -312,11 +316,9 @@ if __name__ == '__main__':
         X = []
         Y = []
 
-
         #Ekin iniziallizzo l'energia CINETICA (Ekin) della particella con E_0
-        E_0 = SamplingE0(Isotope) #Mev, energia iniziale positrone creato. Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
+        E_0 = SamplingE0(Isotope) #Mev, energia iniziale positrone creato. 
         Ekin = E_0
-        
         while(Ekin > Estep):
 
             step = Step(Estep, Ekin)
@@ -349,8 +351,8 @@ if __name__ == '__main__':
             '''
             ndelta = Ndelta(Ekin, step)            
             yndelta = np.random.uniform(0, 1)
-
-            #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA NON FACCIO PRODURRE RAGGI DELTA
+            
+            #Per non far produrre raggi delta
             if not DELTAPROD:
                 yndelta = ndelta +1
 
@@ -403,9 +405,6 @@ if __name__ == '__main__':
             if WRITE:
                 text_file.write('0  0\n')
 
-
-        if WRITE:
-            text_file.write('%.6f  %.6f\n' %(X[-1], Y[-1]))
         if PLOT:
             plt.plot(X, Y, color = 'tab:blue')
 
@@ -470,8 +469,6 @@ if __name__ == '__main__':
     mean_range = np.mean(Range)
     devstd_range = np.std(Range)
     print(f'Range medio = {mean_range} +/- {devstd_range}')      
-
-
 
 
     plt.show()
