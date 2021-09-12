@@ -303,7 +303,7 @@ if __name__ == '__main__':
             filename = 'endpoints' + Isotope + 'NODELTA.txt'
         text_file = open(filename, "w")
         text_file.write('#x_endpoint   y_endpoint \n')
-    print(filename)
+        print(filename)
     for npart in range(Tot_Npositr):
         if npart%100==0:
             #Print per vedere l'andamento della simulazione
@@ -467,7 +467,7 @@ if __name__ == '__main__':
     Range = np.sqrt(X_end**2 + Y_end**2) 
 
     mean_range = np.mean(Range)
-    devstd_range = np.std(Range)
+    devstd_range = np.std(Range)/np.sqrt(len(Range))
     print(f'Range medio = {mean_range} +/- {devstd_range}')      
 
 
