@@ -246,18 +246,10 @@ def SamplingGauss(dx, E_kin):
     
     theta_ms = 2*xi_c2/(1+F**2) * ((1+v)/v *np.log(1+v) - 1)
     thetax_ms = theta_ms/2
-    std_dev = np.sqrt(thetax_ms)   
-    def Gauss(x, sigma):
-        return 1/np.sqrt(2*np.pi*sigma**2) * np.exp(-x**2/(2*sigma**2))
-    theta_max = 15*np.pi/180 # [rad], 15 gradi di angolo massimo
-    h = 1/np.sqrt(2*np.pi*std_dev**2) #altezza massima della gaussiana
-    found = False
-    while(found is False):
-        theta_rand = np.random.uniform(-theta_max, theta_max)
-        p = Gauss(theta_rand, std_dev)
-        y = np.random.uniform(0, h)
-        if y < p:
-            found = True
+    std_dev = np.sqrt(thetax_ms)  
+
+    theta_rand = np.random.normal(0, std_dev) 
+
     return theta_rand
  
 
@@ -273,8 +265,8 @@ def SamplingGauss(dx, E_kin):
 if __name__ == '__main__': 
     # Ekin = energia cinetica della particella (elettrone o positrone) primaria
 
-    #seed = time.time()
-    seed = 42
+    seed = time.time()
+    #seed = 42
     np.random.seed(int(seed))
 
         
@@ -285,16 +277,16 @@ if __name__ == '__main__':
     Y_end = []
     
     #Numero di positroni da generare
-    Tot_Npositr = 2000
+    Tot_Npositr = 200
     # Scegliere come argomento stringhe: 'F18', 'C11', 'N13', 'O15'
-    Isotope = 'F18'
+    Isotope = 'O15'
 
     #Stabilisco se mettere on (True) o off (False) la produzione di delta
     DELTAPROD = True
     #Stabilisco se scrivere e salvare su file txt le coordinate di arresto
     WRITE = False
     #Stabilisco se creare il grafico dei vari percorsi
-    PLOT = False
+    PLOT = True
 
 
     if WRITE:
